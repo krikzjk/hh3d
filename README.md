@@ -1,3 +1,3 @@
 # hh3d
-HH3D tool secret mode
+HH3D tool version special
 ...
