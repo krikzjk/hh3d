@@ -1869,7 +1869,8 @@
         async sendApiRequest(endpoint, method, nonce, body = {}) {
             try {
                 const url = `${this.weburl}${endpoint}`;
-                const headers = { "Content-Type": "application/json", "X-WP-Nonce": nonce };
+                const securityToken = await getSecurityToken(weburl + 'vong-quay-phuc-van?t');
+                const headers = { "Content-Type": "application/json","x-lv-token": ,"x-lv-token": securityToken, "X-WP-Nonce": nonce };
                 const response = await fetch(url, {
                     method,
                     headers,
