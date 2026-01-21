@@ -5424,7 +5424,7 @@
                     modal.remove();
                 };
             };
-
+            
             // Logic Auto-Rerun
             const startAutoRerun = async () => {
                 // ⭐ BƯỚC 1: KIỂM TRA LUẬN VÕ ĐÃ HOÀN THÀNH CHƯA
@@ -5453,6 +5453,31 @@
                 const shouldChangeElement = localStorage.getItem('luanVoChangeElement') === '1';
                 
                 luanVoRunCount = 0;
+                
+                const getNonceAndRemainingAttacks = async (url) => {
+                    const logPrefix = '[Hoang Vực]';
+                    console.log(`${logPrefix} ▶️ Đang tải trang từ ${url}...`);
+                    try {
+                        const response = await fetch(url);
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const html = await response.text();
+
+                        // Regex 1: lấy số lượt đánh
+                        const attacksMatch = html.match(/<div class="remaining-attacks">Lượt đánh còn lại:\s*(\d+)<\/div>/);
+                        const remainingAttacks = attacksMatch ? parseInt(attacksMatch[1], 10) : null;
+
+                        // Regex 2: lấy nonce
+                        const nonceMatch = html.match(/var ajax_boss_nonce = '([a-f0-9]+)'/);
+                        const nonce = nonceMatch ? nonceMatch[1] : null;
+
+                        console.log(`${logPrefix} ✅ Lấy dữ liệu thành công.`);
+                        return { remainingAttacks, nonce };
+
+                    } catch (e) {
+                        console.error(`${logPrefix} ❌ Lỗi khi tải trang hoặc trích xuất dữ liệu:`, e);
+                        return { remainingAttacks: null, nonce: null };
+                    }
+                };
                 
                 // ⭐ BƯỚC 3: VÒNG LẶP CHẠY LIÊN TỤC
                 const runCycle = async () => {
@@ -5493,7 +5518,7 @@
                         if (shouldChangeElement) {
                             console.log('[Luận Võ Auto] 🔄 Đang đổi ngũ hành 5 lần...');
                             const hoangVucUrl = `${weburl}hoang-vuc?t`;
-                            const { nonce } = await this.getNonceAndRemainingAttacks(hoangVucUrl);
+                            const { nonce } = await getNonceAndRemainingAttacks(hoangVucUrl);
                             if (nonce) {
                                 const ajaxUrl = `${weburl}wp-content/themes/halimmovies-child/hh3d-ajax.php`;
                                 const headers = {
