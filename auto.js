@@ -2140,7 +2140,7 @@
             await this.startLuanVo(nonce, securityToken);
              // ⭐ ĐỌC CÀI ĐẶT TỪ LOCALSTORAGE
             const challengeMode = localStorage.getItem('luanVoChallengeMode') || 'auto';
-            const targetUserId = localStorage.getItem('luanVoTargetUserId') || '';                       
+            const targetUserId = localStorage.getItem(`luanVoTargetUserId_${accountId}`) || '';                       
             
             // Bước 4: Khiêu chiến người chơi
             if (!autoChallenge) {
@@ -5294,7 +5294,7 @@
             // Khởi tạo giá trị mặc định
             if (localStorage.getItem('luanVoAutoChallenge') === null) localStorage.setItem('luanVoAutoChallenge', '1');
             if (localStorage.getItem('luanVoChallengeMode') === null) localStorage.setItem('luanVoChallengeMode', 'auto');
-            if (localStorage.getItem('luanVoTargetUserId') === null) localStorage.setItem('luanVoTargetUserId', '');
+            if (localStorage.getItem(`luanVoTargetUserId_${accountId}`) === null) localStorage.setItem(`luanVoTargetUserId_${accountId}`, '');
             if (localStorage.getItem('luanVoJoinBattle') === null) localStorage.setItem('luanVoJoinBattle', '1');
             if (localStorage.getItem('luanVoEnableAutoAccept') === null) localStorage.setItem('luanVoEnableAutoAccept', '1');
             if (localStorage.getItem('luanVoAutoRerunEnabled') === null) localStorage.setItem('luanVoAutoRerunEnabled', '0');
