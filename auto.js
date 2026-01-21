@@ -5440,6 +5440,11 @@
                     stopAutoRerun();
                     return;
                 }
+                const securityToken = await getSecurityToken(this.weburl + 'luan-vo-duong?t');
+                if (!securityToken) {
+                    showNotification(' Lỗi: Không thể❌ lấy security token cho Luận Võ.', 'error');
+                    return;
+                }
                 
                 // ⭐ BƯỚC 2: ĐỌC CÀI ĐẶT
                 const delaySeconds = parseInt(localStorage.getItem('luanVoRerunDelaySeconds') || '120');
@@ -5478,7 +5483,7 @@
                                 for(let attempt = 1; attempt <= 5; attempt++) {
                                     // Kiểm tra có bị dừng giữa chừng không
                                     if (!luanVoAutoRunTimer) return;
-                                    await luanvo.receiveReward(nonce);
+                                    await luanvo.receiveReward(nonce, securityToken);
                                     await new Promise(resolve => setTimeout(resolve, 1000));
                                 }
                             }
