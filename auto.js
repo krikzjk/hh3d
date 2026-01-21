@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.6.2
+// @version       5.6.1
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.hot/*
@@ -5298,7 +5298,7 @@
             if (localStorage.getItem('luanVoJoinBattle') === null) localStorage.setItem('luanVoJoinBattle', '1');
             if (localStorage.getItem('luanVoEnableAutoAccept') === null) localStorage.setItem('luanVoEnableAutoAccept', '1');
             if (localStorage.getItem('luanVoAutoRerunEnabled') === null) localStorage.setItem('luanVoAutoRerunEnabled', '0');
-            if (localStorage.getItem('luanVoRerunDelaySeconds') === null) localStorage.setItem('luanVoRerunDelaySeconds', '30');
+            if (localStorage.getItem('luanVoRerunDelaySeconds') === null) localStorage.setItem('luanVoRerunDelaySeconds', '5');
             if (localStorage.getItem('luanVoRerunMaxCount') === null) localStorage.setItem('luanVoRerunMaxCount', '200');
             if (localStorage.getItem('luanVoReceiveReward') === null) localStorage.setItem('luanVoReceiveReward', '1');
             if (localStorage.getItem('luanVoChangeElement') === null) localStorage.setItem('luanVoChangeElement', '0');
@@ -5316,10 +5316,10 @@
                 panel.style.cssText = `background: #2d2d2d; border-radius: 8px; padding: 15px; max-width: 420px; width: 90%; color: #fff; box-shadow: 0 10px 40px rgba(0,0,0,0.5);`;
 
                 const challengeMode = localStorage.getItem('luanVoChallengeMode') || 'auto';
-                const targetUserId = localStorage.getItem('luanVoTargetUserId') || '';
+                const targetUserId = localStorage.getItem(`luanVoTargetUserId_${accountId}`) || '';
                 const joinBattle = localStorage.getItem('luanVoJoinBattle') === '1';
                 const enableAutoAccept = localStorage.getItem('luanVoEnableAutoAccept') === '1';
-                const rerunDelaySeconds = localStorage.getItem('luanVoRerunDelaySeconds') || '5';
+                const rerunDelaySeconds = localStorage.getItem('luanVoRerunDelaySeconds') || '30';
                 const rerunMaxCount = localStorage.getItem('luanVoRerunMaxCount') || '200';
                 const receiveReward = localStorage.getItem('luanVoReceiveReward') === '1';
                 const changeElement = localStorage.getItem('luanVoChangeElement') === '1';
