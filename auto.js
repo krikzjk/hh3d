@@ -5440,7 +5440,7 @@
                     stopAutoRerun();
                     return;
                 }
-                const securityToken = await getSecurityToken(this.weburl + 'luan-vo-duong?t');
+                const securityToken = await getSecurityToken(weburl + 'luan-vo-duong?t');
                 if (!securityToken) {
                     showNotification(' Lỗi: Không thể❌ lấy security token cho Luận Võ.', 'error');
                     return;
