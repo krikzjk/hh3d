@@ -5319,7 +5319,7 @@
                 const targetUserId = localStorage.getItem('luanVoTargetUserId') || '';
                 const joinBattle = localStorage.getItem('luanVoJoinBattle') === '1';
                 const enableAutoAccept = localStorage.getItem('luanVoEnableAutoAccept') === '1';
-                const rerunDelaySeconds = localStorage.getItem('luanVoRerunDelaySeconds') || '30';
+                const rerunDelaySeconds = localStorage.getItem('luanVoRerunDelaySeconds') || '5';
                 const rerunMaxCount = localStorage.getItem('luanVoRerunMaxCount') || '200';
                 const receiveReward = localStorage.getItem('luanVoReceiveReward') === '1';
                 const changeElement = localStorage.getItem('luanVoChangeElement') === '1';
