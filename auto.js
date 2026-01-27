@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.6.2
+// @version       5.6.3
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.hot/*
@@ -2220,8 +2220,7 @@
                 }
 
                 // Lấy thông tin lượt còn lại
-                let allFollowingUsers = await this.getFollowingUsers(nonce, securityToken);
-                let myCanSend = allFollowingUsers?.[0]?.can_send_count ?? 5;
+                let myCanSend = 5; // Mặc định 5 lượt
                 
                 console.log(`🎯 Sẽ khiêu chiến user ID: ${targetUserId} (Còn ${myCanSend} lượt)`);
                 
