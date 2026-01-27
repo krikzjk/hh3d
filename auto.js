@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.6.3
+// @version       5.6.4
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.hot/*
@@ -1995,6 +1995,7 @@
          */
         async sendChallenge(userId, nonce, token) {
             console.log(`${this.logPrefix} 🎯 Đang gửi khiêu chiến đến người chơi ID: ${userId}...`);
+            const challengeMode = localStorage.getItem('luanVoChallengeMode') || 'auto';
 
             const sendEndpoint = 'wp-json/luan-vo/v1/send-challenge';
             const sendBody = { target_user_id: userId };
@@ -2004,7 +2005,7 @@
                 console.log(`${this.logPrefix} 🎉 Gửi khiêu chiến thành công! Challenge ID: ${sendResult.data.challenge_id}`);
 
                 // Bước mới: Kiểm tra nếu đối thủ bật auto_accept
-                if (sendResult.data.auto_accept) {
+                if (sendResult.data.auto_accept || challengeMode === 'manual') {
                     console.log(`${this.logPrefix} ✨ Đối thủ tự động chấp nhận, đang hoàn tất trận đấu...`);
 
                     const approveEndpoint = 'wp-json/luan-vo/v1/auto-approve-challenge';
@@ -2013,7 +2014,7 @@
                         target_user_id: userId
                     };
 
-                    const approveResult = await this.sendApiRequest(approveEndpoint, 'POST', nonce, token, approveBody);
+                    const approveResult = await this.sendApiRequest(approveEndpoint, 'POST', nonce, approveBody);
 
                     if (approveResult && approveResult.success) {
                         showNotification(`[Luận võ] ${approveResult.data.message}!`, 'success');
