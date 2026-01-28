@@ -2014,7 +2014,7 @@
                         target_user_id: userId
                     };
 
-                    const approveResult = await this.sendApiRequest(approveEndpoint, 'POST', nonce, approveBody);
+                    const approveResult = await this.sendApiRequest(approveEndpoint, 'POST', nonce, token, approveBody);
 
                     if (approveResult && approveResult.success) {
                         showNotification(`[Luận võ] ${approveResult.data.message}!`, 'success');
