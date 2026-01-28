@@ -2038,7 +2038,7 @@
                     return true;
                 }
             } else {
-                const message = sendResult?.data?.message || 'Lỗi không xác định.';
+                const message = sendResult?.data?.message || JSON.stringify(sendResult) || 'Lỗi không xác định.';
                 showNotification(`❌ Gửi khiêu chiến thất bại: ${message}`, 'error');
                 return false;
             }
