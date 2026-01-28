@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.6.4
+// @version       5.6.5
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.hot/*
@@ -505,6 +505,15 @@
             const accountData = this.getAccountData(accountId);
             if (accountData[taskName]) {
                 accountData[taskName].done = true;
+                this.saveData();
+            } else {
+                console.error(`[TaskTracker] Nhiệm vụ "${taskName}" không tồn tại cho tài khoản "${accountId}"`);
+            }
+        }
+        unmarkTaskDone(accountId, taskName) {
+            const accountData = this.getAccountData(accountId);
+            if (accountData[taskName]) {
+                accountData[taskName].done = false;
                 this.saveData();
             } else {
                 console.error(`[TaskTracker] Nhiệm vụ "${taskName}" không tồn tại cho tài khoản "${accountId}"`);
@@ -1890,7 +1899,7 @@
          */
         async sendApiRequest(endpoint, method, nonce, token, body = {}) {
             try {
-                const url = `${this.weburl}${endpoint}`;
+                const url = `${weburl}${endpoint}`;
                 const headers = { "Content-Type": "application/json", "X-LV-Token": token, "X-WP-Nonce": nonce };
                 const response = await fetch(url, {
                     method,
@@ -5378,6 +5387,7 @@
                     </div>
 
                     <div style="display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px;">
+                        <button id="luanvo-unmark-btn" style="padding: 8px 16px; border: none; border-radius: 4px; background: #ff9800; color: #fff; cursor: pointer; font-size: 12px;">🔄 Bỏ hoàn thành</button>
                         <button id="luanvo-cancel-btn" style="padding: 8px 16px; border: none; border-radius: 4px; background: #555; color: #fff; cursor: pointer; font-size: 12px;">Hủy</button>
                         <button id="luanvo-save-btn" style="padding: 8px 16px; border: none; border-radius: 4px; background: #4caf50; color: #fff; cursor: pointer; font-weight: bold; font-size: 12px;">💾 Lưu</button>
                     </div>
@@ -5393,6 +5403,15 @@
                 });
 
                 panel.querySelector('#luanvo-cancel-btn').onclick = () => modal.remove();
+                panel.querySelector('#luanvo-unmark-btn').onclick = async () => {
+                    const accountId = await getAccountId();
+                    if (!accountId) {
+                        showNotification('❌ Không lấy được Account ID!', 'error');
+                        return;
+                    }
+                    taskTracker.unmarkTaskDone(accountId, 'luanvo');
+                    showNotification('✅ Đã bỏ hoàn thành Luận Võ!', 'success');
+                };
                 modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
 
                 panel.querySelector('#luanvo-save-btn').onclick = () => {
