@@ -1,10 +1,14 @@
-{     
-   "3.5.0": {
+{
+  "3.5.0": {
     "version": "3.5.0",
     "url": "https://github.com/Thuanhazzz/HH3D/releases/download/v3.5.0/v3.5.0.zip"
   },
-   "3.5.1": {
+  "3.5.1": {
     "version": "3.5.1",
     "url": "https://github.com/Thuanhazzz/HH3D/releases/download/v3.5.1/v3.5.1.zip"
+  },
+  "3.5.2": {
+    "version": "3.5.2",
+    "url": "null"
   }
 }
