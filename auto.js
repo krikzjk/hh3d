@@ -21,7 +21,7 @@
     const weburl = window.location.origin.replace(/\/+$/, '') + '/';
     const ajaxUrl = weburl + 'wp-content/themes/halimmovies-child/hh3d-ajax.php';
     let questionDataCache = null;
-    const QUESTION_DATA_URL = 'https://raw.githubusercontent.com/syntaxerr0r/Vuong_Ma_Tu/refs/heads/main/vandap.json';
+    const QUESTION_DATA_URL = 'https://raw.githubusercontent.com/krikzjk/hh3d/main/vandap.json';
     let isCssInjected = false;
     let userBetCount = 0;
     let userBetStones = [];
@@ -6936,7 +6936,7 @@
 
             const fetchPromoCode = async () => {
                 try {
-                    const response = await fetch('https://raw.githubusercontent.com/syntaxerr0r/Vuong_Ma_Tu/refs/heads/main/code');
+                    const response = await fetch('https://raw.githubusercontent.com/krikzjk/hh3d/main/code');
                     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
                     const text = await response.text();
                     return text.trim();
