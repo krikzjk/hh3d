@@ -4,7 +4,7 @@
 // @version       5.6.7
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
-// @match         https://hoathinh3d.bz/*
+// @match         https://hoathinh3d.to/*
 // @require       https://cdn.jsdelivr.net/npm/sweetalert2@11.26.12/dist/sweetalert2.all.min.js
 // @run-at        document-start
 // @grant         unsafeWindow
