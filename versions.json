@@ -18,5 +18,9 @@
   "3.5.4": {
     "version": "3.5.4",
     "url": "https://github.com/krikzjk/hh3d/releases/download/v3.5.4/v3.5.4.zip"
+  },
+  "3.5.5": {
+    "version": "3.5.5",
+    "url": "https://github.com/krikzjk/hh3d/releases/download/v3.5.5/v3.5.5.zip"
   }
 }
