@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.7.1
+// @version       5.7.2
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.ai/*
@@ -5304,13 +5304,13 @@
             if (localStorage.getItem('luanVoAutoChallenge') === null) localStorage.setItem('luanVoAutoChallenge', '1');
             if (localStorage.getItem('luanVoChallengeMode') === null) localStorage.setItem('luanVoChallengeMode', 'auto');
             if (localStorage.getItem(`luanVoTargetUserId_${accountId}`) === null) localStorage.setItem(`luanVoTargetUserId_${accountId}`, '');
-            if (localStorage.getItem('luanVoJoinBattle') === null) localStorage.setItem('luanVoJoinBattle', '1');
-            if (localStorage.getItem('luanVoEnableAutoAccept') === null) localStorage.setItem('luanVoEnableAutoAccept', '1');
+            if (localStorage.getItem('luanVoJoinBattle') === null) localStorage.setItem('luanVoJoinBattle', '0');
+            if (localStorage.getItem('luanVoEnableAutoAccept') === null) localStorage.setItem('luanVoEnableAutoAccept', '0');
             if (localStorage.getItem('luanVoAutoRerunEnabled') === null) localStorage.setItem('luanVoAutoRerunEnabled', '0');
             if (localStorage.getItem('luanVoRerunDelaySeconds') === null) localStorage.setItem('luanVoRerunDelaySeconds', '5');
             if (localStorage.getItem('luanVoRerunMaxCount') === null) localStorage.setItem('luanVoRerunMaxCount', '200');
             if (localStorage.getItem('luanVoReceiveReward') === null) localStorage.setItem('luanVoReceiveReward', '1');
-            if (localStorage.getItem('luanVoChangeElement') === null) localStorage.setItem('luanVoChangeElement', '0');
+            if (localStorage.getItem('luanVoChangeElement') === null) localStorage.setItem('luanVoChangeElement', '1');
 
             // Tạo modal cài đặt
             const createSettingsModal = () => {
