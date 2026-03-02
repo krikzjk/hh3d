@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.7.2
+// @version       5.7.3
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.ai/*
@@ -132,9 +132,9 @@
                     console.error(`${logPrefix} ❌ Fetch thất bại với status: ${response.status}`);
                     // Chỉ mở tab mới khi lỗi 403 (Forbidden - phiên hết hạn/chưa đăng nhập)
                     if (response.status === 403) {
-                        console.error(`${logPrefix} 🚨 Lỗi 403 Forbidden. Đang mở tab mới...`);
-                        window.open(url, '_blank');
-                        showNotification('Phiên đăng nhập hết hạn (403). Đã mở tab mới, vui lòng đăng nhập lại.', 'error');
+                        console.error(`${logPrefix} 🚨 Lỗi 403 Forbidden....`);
+                        // window.open(url, '_blank');
+                        showNotification('Phiên đăng nhập hết hạn hoặc bị chặn(403). Vui lòng thử lại.', 'error');
                     }
                     return null;
                 }
