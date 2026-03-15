@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name          HH3D Auto - Edited by Krizk
 // @namespace     HH3D_Tool_Tampermonkey
-// @version       5.7.3
+// @version       5.7.4
 // @description   Thêm menu tùy chỉnh với các liên kết hữu ích và các chức năng tự động(sửa một chút so với bản gốc)
 // @author        Dr. Trune & Krizk
 // @match         https://hoathinh3d.ai/*
@@ -217,14 +217,14 @@
 
         const scripts = document.querySelectorAll('script');
         for (const script of scripts) {
-            const match = script.innerHTML.match(/customRestNonce\s*=\s*'([a-f0-9]+)'/);
+            const match = script.innerHTML.match(/"restNonce"\s*:\s*"([a-f0-9]+)"/i);
             if (match) {
                 return match[1];
             }
         }
 
         try {
-            const nonce = await getSecurityNonce(weburl + '?t', /customRestNonce\s*=\s*'([a-f0-9]+)'/);
+            const nonce = await getSecurityNonce(weburl + '?t', /"restNonce"\s*:\s*"([a-f0-9]+)"/i);
             if (nonce) {
                 return nonce;
             }
@@ -2475,7 +2475,6 @@
             };
         }
 
-
         async enterMine(mineId) {
             // Lấy nonce
             const nonce = await this.#getNonce(/action: 'enter_mine',\s*mine_id:\s*mine_id,[\s\S]*?security: '([a-f0-9]+)'/);
@@ -2537,6 +2536,38 @@
             }
         }
 
+        async decodeAvatar(encoded, viewerId) {
+            try {
+                // ⭐ Validate input
+                if (!encoded || typeof encoded !== 'string') {
+                    return null;
+                }
+                
+                const key = (viewerId % 251) + 1;
+                // ⭐ Browser không có Buffer, dùng atob() để decode Base64
+                const raw = atob(encoded);
+                let result = '';
+                for (let i = 0; i < raw.length; i++) {
+                    result += String.fromCharCode(raw.charCodeAt(i) ^ (key ^ (i % 7)));
+                }
+                return result;
+            } catch(e) {
+                console.error('decodeAvatar error:', e, 'Input:', encoded);
+                return null;
+            }
+        }
+        async getIdfromAvatar(avatarUrl) {
+            // ⭐ Validate input
+            if (!avatarUrl || typeof avatarUrl !== 'string') {
+                return null;
+            }
+            
+            // Tách user ID từ avatar URL: /ultimatemember/{ID}/
+            const idFromAvatar = (avatarUrl.match(/\/ultimatemember\/(\d+)\//i) || [])[1];
+            if (idFromAvatar) return parseInt(idFromAvatar);
+            return null;
+        }
+
         async getUsersInMine(mineId) {
 
             // --- 1. Lấy 'security' nonce (giữ logic cache của bạn) ---
@@ -2579,7 +2610,7 @@
             try {
                 const r = await fetch(this.ajaxUrl, { method: 'POST', headers: this.headers, body: payload, credentials: 'include' });
                 const d = await r.json();
-
+                console.log(`${this.logPrefix} 🧑‍🤝‍🧑 Người trong mỏ:`, d);
                 // Logic trả về của bạn (hoạt động tốt)
                 return d.success ? d.data : (showNotification(d.data.message || 'Lỗi lấy thông tin người chơi.', 'error'), null);
 
@@ -2663,8 +2694,7 @@
             }
         }
 
-
-        async attackUser(userId, mineId) {
+        async attackUser(attackToken, mineId) {
             // ✅ Kiểm tra cooldown: không cho tấn công cách nhau dưới 5500ms
             const now = Date.now();
             if (this._lastAttackTime && (now - this._lastAttackTime) < 5500) {
@@ -2679,7 +2709,7 @@
                 showNotification('Lỗi nonce (attack_user_in_mine).', 'error');
                 return false;
             }
-            const payload = new URLSearchParams({ action: 'attack_user_in_mine', target_user_id: userId, mine_id: mineId, security_token: securityToken, security: security });
+            const payload = new URLSearchParams({ action: 'attack_user_in_mine', attack_token: attackToken, mine_id: mineId, security_token: securityToken, security: security });
             try {
                 const r = await fetch(this.ajaxUrl, { method: 'POST', headers: this.headers, body: payload, credentials: 'include' });
                 const d = await r.json();
@@ -2884,7 +2914,6 @@
                 // Dùng đường dẫn tương đối "/" để tự động lấy domain hiện tại.
                 // Không cần biến "weburl" (tránh lỗi weburl is not defined).
                 const response = await fetch("/danh-sach-cac-tong-mon-tai-hoathinh3d");
-
                 // Kiểm tra trạng thái HTTP
                 if (!response.ok) {
                     throw new Error(`Lỗi kết nối: ${response.status} ${response.statusText}`);
@@ -2896,44 +2925,55 @@
                 const doc = parser.parseFromString(htmlText, "text/html");
 
                 // Chọn danh sách hàng
-                const rows = doc.querySelectorAll('table.bxh-page tbody tr');
+                const rows = doc.querySelectorAll('table.guild-table tbody tr');
                 const results = [];
+                console.log(`Tìm thấy ${rows.length} hàng tổng môn.`);
 
                 rows.forEach(row => {
-                    // Lấy nút tham gia để trích xuất ID
-                    const btn = row.querySelector('button.join-group');
-                    const id = btn ? btn.getAttribute('data-group-id') : null;
+                    // ⭐ CẤU TRÚC MỚI: Tìm guild-info-wrapper
+                    const guildWrapper = row.querySelector('.guild-info-wrapper');
+                    if (!guildWrapper) return;
 
-                    // Lấy khu vực tên
-                    const nameDiv = row.querySelector('.display-container.group-name');
+                    // ⭐ LẤY ID TỪ LINK /tong-mon/[ID]
+                    const link = guildWrapper.querySelector('a[href*="/tong-mon/"]');
+                    let id = null;
+                    if (link) {
+                        const href = link.getAttribute('href') || '';
+                        const match = href.match(/\/tong-mon\/(\d+)/);
+                        if (match) id = match[1];
+                    }
 
-                    // 3. SỬA LỖI LOGIC PARSE TÊN:
-                    // Chỉ xử lý khi có đủ ID và Tên
-                    if (nameDiv && id) {
-                        let levelNum = 0;
+                    // Fallback: Lấy từ nút button nếu không tìm thấy từ link
+                    if (!id) {
+                        const btn = row.querySelector('button.join-group');
+                        id = btn ? btn.getAttribute('data-group-id') : null;
+                    }
 
-                        // Lấy thẻ level riêng biệt
-                        const levelSpan = nameDiv.querySelector('.group-level');
+                    // ⭐ LẤY TÊN TỪ .guild-name
+                    const nameSpan = guildWrapper.querySelector('.guild-name');
+                    let nameText = '';
+                    if (nameSpan) {
+                        nameText = (nameSpan.textContent || '').trim()
+                            .replace(/^[""\s]+|[""\s]+$/g, ''); // Loại bỏ dấu ngoặc kép và khoảng trắng đầu/cuối
+                    }
 
-                        if (levelSpan) {
-                            const match = levelSpan.textContent.match(/\d+/);
-                            if (match) levelNum = parseInt(match[0], 10);
-                        }
+                    // ⭐ LẤY LEVEL TỪ .guild-level
+                    let levelNum = 0;
+                    const levelSpan = guildWrapper.querySelector('.guild-level');
+                    if (levelSpan) {
+                        const levelText = levelSpan.textContent || '';
+                        const match = levelText.match(/\d+/);
+                        if (match) levelNum = parseInt(match[0], 10);
+                    }
 
-                        // Lấy tên sạch:
-                        // Thay vì cloneNode (nặng), ta lấy toàn bộ text rồi xóa phần text của level đi
-                        let nameText = nameDiv.innerText;
-                        if (levelSpan) {
-                            nameText = nameText.replace(levelSpan.innerText, '').trim();
-                        } else {
-                            nameText = nameText.trim();
-                        }
-
+                    // ⭐ CHỈ LƯU KHI CÓ ID VÀ TÊN HỢP LỆ
+                    if (id && nameText && nameText.length > 0) {
                         results.push({
                             id: id,
                             name: nameText,
                             level: levelNum
                         });
+                        console.log(`Tổng môn: ID=${id}, Name="${nameText}", Level=${levelNum}`);
                     }
                 });
 
@@ -3069,6 +3109,8 @@
                     users: (m.users || []).map(u => ({
                         // Map key ngắn (i, n, t, r, d, l) -> key dài (id, name...)
                         id: u.i || u.id,
+                        avatar: u.a || u.avatar || u.avatarUrl,
+                        attack_token: u.att || u.attack_token,
                         name: u.n || u.name,
                         tongMonName: u.t || u.tongMonName,
                         role: u.r || u.role,
@@ -3115,6 +3157,9 @@
         // Hàm phụ: Quét toàn bộ mỏ (Trả về dữ liệu thô để upload)
         async scanAllMinesRawData(onProgress) {
             console.log(`${this.logPrefix} 🕵️ Bắt đầu quét toàn bộ mỏ (Mode: Raw Data)...`);
+
+            // Get account ID for decoding avatars
+            const accountId = await getAccountId();
 
             // Nếu có UI truyền xuống, báo cáo ngay
             if (onProgress) onProgress(0, 'Đang chuẩn bị...');
@@ -3189,17 +3234,26 @@
 
                     if (d.success && d.data && d.data.users && d.data.users.length > 0) {
                         // MAP DATA SIÊU GỌN (để upload lên server)
-                        const cleanUsers = d.data.users.map(u => {
+                        const cleanUsers = await Promise.all(d.data.users.map(async (u) => {
                             const extra = this.parseGroupRoleHtml(u.group_role_html);
+                            const avatarUrl = await this.decodeAvatar(u.avatar, accountId);
+                            // console.log(`Account ID: ${accountId}`);
+                            // console.log(`avatar: ${u.avatar} -> ${avatarUrl}`);
+                            const attack_token = u.id;
+                            // ⭐ THÊM AWAIT cho getIdfromAvatar vì nó là async function
+                            const id = (await this.getIdfromAvatar(avatarUrl)) || u.id;
+                            // console.log(`Quét user: ID=${id}, Name="${u.name}", TongMon="${extra.tongMonName}", Role="${extra.role}", Avatar="${avatarUrl}", Attack Token="${attack_token}"`);
                             return {
-                                i: u.id,                                // i = id
+                                i: id,                                // i = id
+                                att: attack_token,                      // att = attack_token
+                                a: avatarUrl,                        // a = avatar
                                 n: u.name,                              // n = name
                                 t: String(extra.tongMonName || '').trim(), // t = tongMon
                                 r: extra.role,                          // r = role
                                 d: u.dong_mon ? 1 : 0,                  // d = dong_mon (1/0 để tiết kiệm dung lượng)
                                 l: u.lien_minh ? 1 : 0                  // l = lien_minh
                             };
-                        });
+                        }));
 
                         rawResult.push({
                             id: m.id,
@@ -3276,12 +3330,15 @@
          * @param {Number} timestamp Thời gian dữ liệu được tạo (Date.now())
          * @param {String} source Nguồn dữ liệu ('Server' hoặc 'Quét trực tiếp')
          */
-        showEnemySearchResults(foundUsers, timestamp, source = 'N/A') {
+        async showEnemySearchResults(foundUsers, timestamp, source = 'N/A') {
             // 1. Kiểm tra dữ liệu đầu vào
             if (!Array.isArray(foundUsers) || foundUsers.length === 0) {
                 showNotification('Không tìm thấy kẻ địch nào phù hợp trong các mỏ.', 'info');
                 return;
             }
+
+            // Get account ID
+            const accountId = await getAccountId();
 
             const PANEL_ID = 'enemyDashboard';
             const RESTORE_ID = 'enemyDashboardRestore';
@@ -3338,6 +3395,61 @@
 
             const sourceColor = source.includes('Server') ? '#4caf50' : '#ff9800';
 
+            // HTML Structure - Build mines HTML first
+            const minesHtml = (await Promise.all(sortedMines.map(async (mine) => {
+                const tongList = mine.tongMons.size > 0 ? Array.from(mine.tongMons).join(', ') : 'Vô phái';
+                const usersHtml = (await Promise.all(mine.users.map(async (u) => {
+                    const isAlly = u.dong_mon || u.lien_minh;
+                    const attackToken = u.id;
+                    const avatarUrl = await this.decodeAvatar(u.avatar, accountId);
+                    // console.log(`Avatar URL for user ${u.name} (ID: ${u.id}): ${avatarUrl} (avatar: ${u.avatar})`);
+                    // ⭐ THÊM AWAIT cho getIdfromAvatar vì nó là async function
+                    const id = (await this.getIdfromAvatar(avatarUrl)) || u.id;
+                    // console.log(`User: ${u.name}, ID: ${id}, Đồng Môn: ${u.dong_mon}, Liên Minh: ${u.lien_minh}`);
+                    const allyLabel = u.dong_mon ? '☯️ Đồng Môn' : (u.lien_minh ? '🤝 Liên Minh' : '');
+                    const nameColor = isAlly ? '#4caf50' : '#ff6b6b';
+                    return `
+                        <div style="padding: 6px 0; border-bottom: 1px dashed #333; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+                                <img src="${avatarUrl || u.a || u.avatar}" alt="avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid #555; flex-shrink: 0;">
+                                <div style="display: flex; flex-direction: column; min-width: 0; flex: 1;">
+                                    <div style="color: ${nameColor}; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(u.name)} ${allyLabel ? `<span style="font-size: 10px;">${allyLabel}</span>` : ''}</div>
+                                    <div style="font-size: 11px; color: #777; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(u.tongMonName || 'Vô phái')} - ${esc(u.role || 'Thành viên')}</div>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0;">
+                                ${isAlly ? '' : `<div style="display: flex; gap: 5px;">
+                                    <button class="btn-check-tuvi" data-uid="${id}" data-attack-token="${attackToken}" data-ally="${isAlly ? '1' : '0'}" style="border:none; background: #039be5; color: white; border-radius: 3px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold;">👁</button>
+                                    <button class="btn-attack" data-uid="${id}" data-attack-token="${attackToken}" data-mid="${mine.id}" style="border:none; background: #d32f2f; color: white; border-radius: 3px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold;">👊</button>
+                                </div>
+                                <div id="info-res-${id}" style="font-size: 10px; color: #b0bec5; min-height: 14px;"></div>`}
+                            </div>
+                        </div>
+                    `;
+                }))).join('');
+                
+                return `
+                    <div style="margin-bottom: 8px; border: 1px solid #333; border-radius: 6px; overflow: hidden;">
+                        <div class="mine-header" data-target="m-${mine.id}" style="padding: 8px 10px; background: #252525; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+                                <div style="flex: 1;">
+                                    <div style="font-weight: bold; color: #ffd700;">⛏ ${esc(mine.name)}</div>
+                                    <div style="font-size: 11px; color: #888;">Quân số: ${mine.users.length} | Phe: ${esc(tongList)}</div>
+                                </div>
+                                <button class="btn-scan-mine" data-target="m-${mine.id}" style="border: 1px solid #555; background: #333; color: #ccc; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">👁 Soi Mỏ</button>
+                                <button id="btn-weak-mine-${mine.id}" class="btn-attack-weak-mine" data-target="m-${mine.id}" style="background: #ef5350; color: #fff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer; display: none; font-weight: bold;">👊 Đấm Kẻ Yếu</button>
+                            </div>
+                            <span class="arrow" style="font-size: 10px; color: #666; margin-left: 8px;">▼</span>
+                        </div>
+                        
+                        <div id="m-${mine.id}" class="mine-content" style="display: none; padding: 5px 10px; background: #151515; border-top: 1px solid #333;">
+                            ${usersHtml}
+                        </div>
+                    </div>
+                `;
+            }))).join('');
+
             // HTML Structure
             panel.innerHTML = `
                 <div class="ed-header" style="padding: 10px 12px; background: #2d2d2d; border-bottom: 1px solid #3d3d3d;">
@@ -3359,47 +3471,7 @@
                 </div>
 
                 <div class="ed-body" style="padding: 10px; max-height: 60vh; overflow-y: auto; background: #1a1a1a;">
-                    ${sortedMines.map(mine => {
-                const tongList = mine.tongMons.size > 0 ? Array.from(mine.tongMons).join(', ') : 'Vô phái';
-                return `
-                        <div style="margin-bottom: 8px; border: 1px solid #333; border-radius: 6px; overflow: hidden;">
-                            <div class="mine-header" data-target="m-${mine.id}" style="padding: 8px 10px; background: #252525; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-                                <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
-                                    <div style="flex: 1;">
-                                        <div style="font-weight: bold; color: #ffd700;">⛏ ${esc(mine.name)}</div>
-                                        <div style="font-size: 11px; color: #888;">Quân số: ${mine.users.length} | Phe: ${esc(tongList)}</div>
-                                    </div>
-                                    <button class="btn-scan-mine" data-target="m-${mine.id}" style="border: 1px solid #555; background: #333; color: #ccc; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">👁 Soi Mỏ</button>
-                                    <button id="btn-weak-mine-${mine.id}" class="btn-attack-weak-mine" data-target="m-${mine.id}" style="background: #ef5350; color: #fff; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer; display: none; font-weight: bold;">👊 Đấm Kẻ Yếu</button>
-                                </div>
-                                <span class="arrow" style="font-size: 10px; color: #666; margin-left: 8px;">▼</span>
-                            </div>
-                            
-                            <div id="m-${mine.id}" class="mine-content" style="display: none; padding: 5px 10px; background: #151515; border-top: 1px solid #333;">
-                                ${mine.users.map(u => {
-                    const isAlly = u.dong_mon || u.lien_minh;
-                    const allyLabel = u.dong_mon ? '☯️ Đồng Môn' : (u.lien_minh ? '🤝 Liên Minh' : '');
-                    const nameColor = isAlly ? '#4caf50' : '#ff6b6b'; // Xanh lá nếu là đồng minh
-                    return `
-                                    <div style="padding: 6px 0; border-bottom: 1px dashed #333; display: flex; justify-content: space-between; align-items: center;">
-                                        <div style="flex: 1;">
-                                            <div style="color: ${nameColor}; font-weight: 500;">${esc(u.name)} ${allyLabel ? `<span style="font-size: 10px;">${allyLabel}</span>` : ''}</div>
-                                            <div style="font-size: 11px; color: #777;">${esc(u.tongMonName || 'Vô phái')} - ${esc(u.role || 'Thành viên')}</div>
-                                        </div>
-                                        
-                                        <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                                            ${isAlly ? '' : `<div style="display: flex; gap: 5px;">
-                                                <button class="btn-check-tuvi" data-uid="${u.id}" data-ally="${isAlly ? '1' : '0'}" style="border:none; background: #039be5; color: white; border-radius: 3px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold;">👁</button>
-                                                <button class="btn-attack" data-uid="${u.id}" data-mid="${mine.id}" style="border:none; background: #d32f2f; color: white; border-radius: 3px; padding: 3px 8px; font-size: 11px; cursor: pointer; font-weight: bold;">👊</button>
-                                            </div>
-                                            <div id="info-res-${u.id}" style="font-size: 10px; color: #b0bec5; min-height: 14px;"></div>`}
-                                        </div>
-                                    </div>
-                                `}).join('')}
-                            </div>
-                        </div>
-                        `;
-            }).join('')}
+                    ${minesHtml}
                 </div>
             `;
 
@@ -3499,64 +3571,67 @@
                     resDiv.textContent = 'Đang xem...';
 
                     try {
-                        const data = await hienTuviKM.enemyInfo(uid);
+                        // const data = await hienTuviKM.getProfileTier(uid);
+                        const tierText = await hienTuviKM.getProfileTier(uid);
 
-                        if (data) {
-                            const tuViStr = new Intl.NumberFormat('vi-VN').format(data.tuVi || 0);
-                            let rightSideHtml = '';
+                        // if (data) {
+                        //     const tuViStr = new Intl.NumberFormat('vi-VN').format(data.tuVi || 0);
+                        //     let rightSideHtml = '';
 
-                            // ⚡ KÈO THƠM: KHÔNG TỐN LƯỢT
-                            if (data.notCountAttack) {
-                                rightSideHtml = `<span style="color: #ea80fc; font-weight: bold; text-shadow: 0 0 5px rgba(234,128,252,0.5);">⚡ Không tốn lượt</span>`;
+                        //     // ⚡ KÈO THƠM: KHÔNG TỐN LƯỢT
+                        //     if (data.notCountAttack) {
+                        //         rightSideHtml = `<span style="color: #ea80fc; font-weight: bold; text-shadow: 0 0 5px rgba(234,128,252,0.5);">⚡ Không tốn lượt</span>`;
 
-                                // Đánh dấu nút tấn công
-                                if (attackBtn) {
-                                    attackBtn.classList.add('is-weak-target');
-                                    attackBtn.style.border = '1px solid #ea80fc';
-                                    attackBtn.style.boxShadow = '0 0 5px #ea80fc';
+                        //         // Đánh dấu nút tấn công
+                        //         if (attackBtn) {
+                        //             attackBtn.classList.add('is-weak-target');
+                        //             attackBtn.style.border = '1px solid #ea80fc';
+                        //             attackBtn.style.boxShadow = '0 0 5px #ea80fc';
 
-                                    // 1. Cập nhật nút Global
-                                    weakCountGlobal++;
-                                    btnWeakGlobal.style.display = 'block';
-                                    btnWeakGlobal.textContent = `👊 Đấm Kẻ Yếu (${weakCountGlobal})`;
+                        //             // 1. Cập nhật nút Global
+                        //             weakCountGlobal++;
+                        //             btnWeakGlobal.style.display = 'block';
+                        //             btnWeakGlobal.textContent = `👊 Đấm Kẻ Yếu (${weakCountGlobal})`;
 
-                                    // 2. Cập nhật nút Local (Của mỏ)
-                                    const mid = attackBtn.getAttribute('data-mid');
-                                    const btnWeakMine = document.getElementById(`btn-weak-mine-${mid}`);
-                                    if (btnWeakMine) {
-                                        btnWeakMine.style.display = 'block';
-                                        // Tăng đếm cho mỏ (lưu vào attribute data-count)
-                                        let currentCount = parseInt(btnWeakMine.getAttribute('data-count') || 0) + 1;
-                                        btnWeakMine.setAttribute('data-count', currentCount);
-                                        btnWeakMine.textContent = `👊 Đấm Kẻ Yếu (${currentCount})`;
-                                    }
-                                }
+                        //             // 2. Cập nhật nút Local (Của mỏ)
+                        //             const mid = attackBtn.getAttribute('data-mid');
+                        //             const btnWeakMine = document.getElementById(`btn-weak-mine-${mid}`);
+                        //             if (btnWeakMine) {
+                        //                 btnWeakMine.style.display = 'block';
+                        //                 // Tăng đếm cho mỏ (lưu vào attribute data-count)
+                        //                 let currentCount = parseInt(btnWeakMine.getAttribute('data-count') || 0) + 1;
+                        //                 btnWeakMine.setAttribute('data-count', currentCount);
+                        //                 btnWeakMine.textContent = `👊 Đấm Kẻ Yếu (${currentCount})`;
+                        //             }
+                        //         }
 
-                            } else {
-                                // Kèo thường
-                                const winRateRaw = data.winRate || '?';
-                                const winRateDisplay = String(winRateRaw).includes('%') ? winRateRaw : `${winRateRaw}%`;
-                                let rateNumber = parseInt(String(winRateRaw).replace('%', ''));
-                                if (isNaN(rateNumber)) rateNumber = -1;
+                        //     } else {
+                        //         // Kèo thường
+                        //         const winRateRaw = data.winRate || '?';
+                        //         const winRateDisplay = String(winRateRaw).includes('%') ? winRateRaw : `${winRateRaw}%`;
+                        //         let rateNumber = parseInt(String(winRateRaw).replace('%', ''));
+                        //         if (isNaN(rateNumber)) rateNumber = -1;
 
-                                let rateColor = '#ffffff';
-                                if (rateNumber === -1) rateColor = '#808080';
-                                else if (rateNumber < 25) rateColor = '#ff5f5f';
-                                else if (rateNumber > 75) rateColor = '#00ff00';
+                        //         let rateColor = '#ffffff';
+                        //         if (rateNumber === -1) rateColor = '#808080';
+                        //         else if (rateNumber < 25) rateColor = '#ff5f5f';
+                        //         else if (rateNumber > 75) rateColor = '#00ff00';
 
-                                rightSideHtml = `<span style="color: ${rateColor}; font-weight: bold;">${winRateDisplay}</span>`;
+                        //         rightSideHtml = `<span style="color: ${rateColor}; font-weight: bold;">${winRateDisplay}</span>`;
 
-                                // Xóa dấu hiệu nếu user soi lại và thấy không còn ngon
-                                if (attackBtn && attackBtn.classList.contains('is-weak-target')) {
-                                    attackBtn.classList.remove('is-weak-target');
-                                    attackBtn.style.border = 'none';
-                                    attackBtn.style.boxShadow = 'none';
-                                }
-                            }
+                        //         // Xóa dấu hiệu nếu user soi lại và thấy không còn ngon
+                        //         if (attackBtn && attackBtn.classList.contains('is-weak-target')) {
+                        //             attackBtn.classList.remove('is-weak-target');
+                        //             attackBtn.style.border = 'none';
+                        //             attackBtn.style.boxShadow = 'none';
+                        //         }
+                        //     }
 
-                            resDiv.innerHTML = `<span style="color: #4fc3f7;">${tuViStr}</span> | ${rightSideHtml}`;
-                        } else {
-                            resDiv.textContent = 'K.Rõ';
+                        //     resDiv.innerHTML = `<span style="color: #4fc3f7;">${tuViStr}</span> | ${rightSideHtml}`;
+                        // } else 
+                        {
+                            // resDiv.textContent = 'K.Rõ';
+                            resDiv.textContent = `${tierText}`;
                             resDiv.style.color = '#ff5252';
                         }
                     } catch (err) {
@@ -3577,11 +3652,12 @@
                 btn.onclick = (e) => {
                     e.stopPropagation();
                     const uid = btn.getAttribute('data-uid');
+                    const attackToken = btn.getAttribute('data-attack-token');
                     const mid = btn.getAttribute('data-mid');
                     btn.textContent = '⚔';
 
                     if (typeof khoangmach !== 'undefined' && khoangmach.attackUser) {
-                        khoangmach.attackUser(uid, mid);
+                        khoangmach.attackUser(attackToken, mid);
                         setTimeout(() => {
                             btn.textContent = '✔';
                             btn.style.opacity = '0.5';
@@ -5103,12 +5179,12 @@
             switch (taskName) {
                 case 'autorun':
                     if (this.autorunIsRunning) {
-                        button.textContent = 'Đang chạy autorun...';
+                        button.textContent = 'Dừng Lại';
                         if (statusIcon) {
                             statusIcon.classList.add('running');
                         }
                     } else {
-                        button.textContent = 'Autorun';
+                        button.textContent = 'Bắt Đầu';
                         if (statusIcon) {
                             statusIcon.classList.remove('running');
                         }
@@ -5689,8 +5765,9 @@
             let autorunEnabled = localStorage.getItem('autorunEnabled') === '1';
 
             const updateSettingButtonState = (isEnabled) => {
-                autorunSettingsButton.textContent = isEnabled ? '✅' : '❌';
-                autorunSettingsButton.title = isEnabled ? 'Tự động chạy Autorun khi tải: Bật' : 'Tự động chạy Autorun khi tải: Tắt';
+                autorunSettingsButton.textContent = isEnabled ? 'Bật' : 'Tắt';
+                autorunSettingsButton.style.background = isEnabled ? '#4caf50' : '#f44336';
+                autorunSettingsButton.title = isEnabled ? 'Tự động chạy khi tải trang: Bật' : 'Tự động chạy khi tải trang: Tắt';
             };
             updateSettingButtonState(autorunEnabled);
 
@@ -5699,7 +5776,7 @@
                 autorunEnabled = !autorunEnabled;
                 localStorage.setItem('autorunEnabled', autorunEnabled ? '1' : '0');
                 updateSettingButtonState(autorunEnabled);
-                const message = autorunEnabled ? 'Tự động chạy Autorun khi tải đã được bật' : 'Tự động chạy Autorun khi tải đã được tắt';
+                const message = autorunEnabled ? 'Tự động chạy khi tải trang đã được bật' : 'Tự động chạy khi tải trang đã được tắt';
                 showNotification(message, 'info');
             });
 
@@ -7653,9 +7730,9 @@
                 }
 
                 existingInfo.innerHTML = `
-                    <h style="color: #ff5f5f;">🩸Kẻ địch: <b>${totalEnemies}</b></h><br>
-                    <h style="color: #ffff00;">🤝Liên Minh: <b>${totalLienMinh}</b></h><br>
-                    <h style="color: #9c59bdff;">☯️Đồng Môn: <b>${totalDongMon}</b></h>
+                    <h style="color: #ff5f5f;">🩸Kẻ địch: <b>${totalEnemies}ㅤ</b></h>
+                    <h style="color: #9c59bdff;">☯️Đồng Môn: <b>${totalDongMon}ㅤ</b></h>
+                    <h style="color: #ffff00;">🤝Liên Minh: <b>${totalLienMinh}ㅤ</b></h>
                 `;
             }
         }
