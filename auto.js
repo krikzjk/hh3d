@@ -5062,33 +5062,6 @@
 
             .custom-script-item-wrapper {
                 position: relative; /* Quan trọng: Đặt vị trí tương đối để định vị icon */
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-            }
-            
-            .custom-script-item-wrapper > a {
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                text-decoration: none;
-                color: inherit;
-                cursor: pointer;
-                padding: 8px;
-                border-radius: 4px;
-                transition: background-color 0.2s ease;
-            }
-            
-            .custom-script-item-wrapper > a:hover {
-                background-color: rgba(255, 255, 255, 0.1);
-            }
-            
-            .custom-script-item-wrapper .nav-label {
-                font-size: 12px;
-                margin-top: 4px;
-                text-align: center;
             }
 
             /* Biểu tượng trạng thái Autorun */
@@ -6768,7 +6741,7 @@
                 }
 
                 const customMenuWrapper = document.createElement('div');
-                customMenuWrapper.classList.add('custom-script-item-wrapper', 'relative'); // Thêm class như nav items khác
+                customMenuWrapper.classList.add('load-notification', 'relative', 'custom-script-item-wrapper');
 
                 const newMenuButton = document.createElement('a');
                 newMenuButton.href = '#';
@@ -6788,12 +6761,6 @@
                 iconSpan.textContent = 'task';
                 iconDiv.appendChild(iconSpan);
                 newMenuButton.appendChild(iconDiv);
-                
-                // Thêm label giống các nav items khác
-                const navLabel = document.createElement('span');
-                navLabel.classList.add('nav-label');
-                navLabel.textContent = 'Auto';
-                newMenuButton.appendChild(navLabel);
 
                 const dropdownMenu = document.createElement('div');
                 dropdownMenu.className = 'custom-script-menu hidden';
@@ -6848,17 +6815,15 @@
                 // ---------------------------------------------
                 customMenuWrapper.appendChild(newMenuButton);
                 customMenuWrapper.appendChild(dropdownMenu);
-                
-                // Tìm phần tử có id="get-user-info" và chèn wrapper sau nó
-                const getUserInfoElement = document.getElementById('get-user-info');
-                if (getUserInfoElement) {
-                    parentNavItems.insertBefore(customMenuWrapper, getUserInfoElement.nextSibling);
-                    console.log('[HH3D Script] 🎉 Chèn menu tùy chỉnh thành công sau #get-user-info!');
-                } else {
-                    // Nếu không tìm thấy get-user-info, fallback về vị trí cũ
-                    parentNavItems.insertBefore(customMenuWrapper, notificationsDiv.nextSibling);
-                    console.log('[HH3D Script] 🎉 Chèn menu tùy chỉnh thành công (vị trí mặc định)!');
-                }
+                parentNavItems.insertBefore(customMenuWrapper, notificationsDiv.nextSibling);
+
+
+
+
+
+
+
+                console.log('[HH3D Script] 🎉 Chèn menu tùy chỉnh thành công!');
 
                 newMenuButton.addEventListener('click', (e) => {
                     e.preventDefault();
